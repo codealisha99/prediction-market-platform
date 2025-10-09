@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Draggable } from '@hello-pangea/dnd';
 import Modal from './Modal';
 import './Card.css';
@@ -6,7 +7,7 @@ import './Card.css';
 const Card = ({ card, index, listId, onDeleteCard }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const cardRef = useRef(null);
-  const dragStartPositionRef = useRef({ x: 0, y: 0 });
+  
 
   const formatPrice = (price) => {
     if (!price) return '';
@@ -38,31 +39,7 @@ const Card = ({ card, index, listId, onDeleteCard }) => {
     }
   };
 
-  const calculateDragOffset = (e) => {
-    const cardElement = cardRef.current;
-    if (!cardElement) return;
-
-    const rect = cardElement.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0]?.clientY);
-    
-    if (clientX && clientY) {
-      dragStartPositionRef.current = {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-      };
-    }
-  };
-
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.delete-btn')) return;
-    calculateDragOffset(e);
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.target.closest('.delete-btn')) return;
-    calculateDragOffset(e);
-  };
+  
 
   const handleClick = (e) => {
     if (!e.target.closest('.delete-btn')) {
@@ -101,7 +78,8 @@ const Card = ({ card, index, listId, onDeleteCard }) => {
   return (
     <>
       <Draggable draggableId={card.id} index={index}>
-        {(provided, snapshot) => (
+        {(provided, snapshot) => {
+          const cardNode = (
           <div
             className={`card ${snapshot.isDragging ? 'dragging' : ''} ${isSold ? 'sold' : ''}`}
             ref={(el) => {
@@ -110,15 +88,8 @@ const Card = ({ card, index, listId, onDeleteCard }) => {
             }}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
             onClick={handleClick}
-            style={{
-              ...provided.draggableProps.style,
-              ...(snapshot.isDragging && {
-                transform: `${provided.draggableProps.style?.transform || ''} translate(${-dragStartPositionRef.current.x}px, ${-dragStartPositionRef.current.y}px)`,
-              })
-            }}
+            style={provided.draggableProps.style}
           >
             <div className="card-status">
               {isLive && <span className="live-badge">LIVE</span>}
@@ -191,7 +162,9 @@ const Card = ({ card, index, listId, onDeleteCard }) => {
               ×
             </button>
           </div>
-        )}
+          );
+          return snapshot.isDragging ? createPortal(cardNode, document.body) : cardNode;
+        }}
       </Draggable>
       
       <Modal
